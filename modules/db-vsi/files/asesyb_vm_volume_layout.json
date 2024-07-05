@@ -1,0 +1,80 @@
+{
+  "profiles": {
+    "default": {
+      "storage": {
+        "data_vg": {
+          "disk_size": "<data_disk_size>",
+          "disk_count": "1",
+          "iops": "10iops-tier",
+          "lvm": {
+            "vg": {
+              "vg_name": "data_vg"
+            },
+            "lv": [
+              {
+                "lv_name": "sapdata1_lv",
+                "lv_size": "100%FREE",
+                "fs_type": "xfs",
+                "mount_point": "/sybase/<SID>/sapdata_1",
+                "mount_options": "defaults"
+              }
+            ]
+          }
+        },
+        "log_vg": {
+          "disk_size": "32",
+          "disk_count": "1",
+          "iops": "10iops-tier",
+          "lvm": {
+            "vg": {
+              "vg_name": "log_vg"
+            },
+            "lv": [
+              {
+                "lv_name": "saplog_lv",
+                "lv_size": "100%FREE",
+                "fs_type": "xfs",
+                "mount_point": "/sybase/<SID>/saplog"
+              }
+            ]
+          }
+        },
+        "syb_vg": {
+          "disk_size": "64",
+          "disk_count": "1",
+          "iops": "general-purpose",
+          "lvm": {
+            "vg": {
+              "vg_name": "syb_vg"
+            },
+            "lv": [
+              {
+                "lv_name": "sybsoftware_lv",
+                "lv_size": "100%FREE",
+                "fs_type": "xfs",
+                "mount_point": "/sybase/<SID>"
+              }
+            ]
+          }
+        },
+        "swap": {
+          "disk_size": "<swap_disk_size>",
+          "disk_count": "1",
+          "iops": "10iops-tier",
+          "lvm": {
+            "vg": {
+              "vg_name": "swap_vg"
+            },
+            "lv": [
+              {
+                "lv_name": "swap_lv",
+                "lv_size": "100%FREE",
+                "fs_type": "swap"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

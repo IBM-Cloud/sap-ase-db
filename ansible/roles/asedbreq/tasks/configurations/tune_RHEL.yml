@@ -1,0 +1,35 @@
+---
+- name: Tuning Red Hat Enterprise Linux for Sybase Databases (RedHat KB 69988)
+  sysctl:
+    sysctl_file: /etc/sysctl.d/ase.conf
+    name: "{{ kernel_param.name }}"
+    value: "{{ kernel_param.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  loop:
+    - { name: vm.swappiness, value: 10 }
+    - { name: vm.dirty_background_ratio, value: 3 }
+    - { name: vm.dirty_ratio, value: 40 }
+    - { name: vm.dirty_expire_centisecs, value: 500 }
+    - { name: vm.dirty_writeback_centisecs, value: 100 }
+  loop_control:
+    loop_var: kernel_param  
+
+- name: Get the kernel parameters already set
+  shell: grub2-editenv - list | grep kernelopts
+  register: kernel_param_list
+  changed_when: False
+
+- name: Create a new list of parameters
+  set_fact:
+    kernel_param_list_new: "{{ kernel_param_list.stdout | trim }} transparent_hugepage=never"
+
+- name: Create the command to set the parameter
+  set_fact:
+    command_new: "grub2-editenv - set \"{{ kernel_param_list_new }}\""
+
+- name: Set Transparent Huge Pages to never
+  shell: "{{ command_new }}"
+  when: '"transparent_hugepage=never" not in kernel_param_list.stdout'
+...

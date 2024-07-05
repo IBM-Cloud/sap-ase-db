@@ -1,0 +1,14 @@
+---
+- name: Change the ownership of /sybase directory
+  file:
+    path: /sybase
+    owner: "syb{{ ase_sid| lower }}"
+    group: sapsys
+    recurse: yes
+
+- name: Update the permissions on /sybase directory
+  ansible.builtin.file:
+    path: /sybase
+    mode: '0775'
+    owner: "syb{{ ase_sid| lower }}"
+    group: sapsys

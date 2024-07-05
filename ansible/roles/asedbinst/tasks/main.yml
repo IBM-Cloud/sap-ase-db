@@ -1,0 +1,47 @@
+---
+- name: Create the ASE user
+  include_tasks: "sap_users.yml"
+
+- name: Prepare the directories
+  include_tasks: "directory_operations.yml"
+
+- name: Install kit prerequisites
+  include_tasks: "install_kit.yml"
+
+- name: Generate the parameter file for setup.bin
+  template:
+      src: aseinst.cfg
+      dest: "{{ ase_kit }}/input_response_file"
+      owner: "syb{{ ase_sid | lower }}"
+      group: sapsys
+
+# - name: Get the installer path
+#   set_fact: 
+#     installer_path: "{{ ([setup_bin_fullname, '/setup.bin'] | list | stringtolist)[0] }}"
+
+# - name: Start SAP ASE DB installation
+#   shell: "cd {{ installer_path }}; {{ setup_bin_fullname }} -f {{ ase_kit }}/input_response_file -i silent"
+#   become: true
+#   become_user: "syb{{ ase_sid | lower }}"
+#   # environment:
+#   #   # SAP Note 2876011
+#   #   HOME: "/sybase/{{ ase_sid|upper }}"
+#   #   _JAVA_OPTIONS: "-Duser.home=/sybase/{{ ase_sid|upper }}"
+
+- name: Start SAP ASE DB installation
+  shell: "{{ setup_bin_fullname }} -f {{ ase_kit }}/input_response_file -i silent"
+  become: true
+  become_user: "syb{{ ase_sid | lower }}"
+  # environment:
+  #   # SAP Note 2876011
+  #   HOME: "/sybase/{{ ase_sid|upper }}"
+  #   _JAVA_OPTIONS: "-Duser.home=/sybase/{{ ase_sid|upper }}"
+
+- name: Post-install actions
+  include_tasks: "post_install.yml"
+
+- name: Cleanup
+  file:
+    path: "{{ ase_kit }}"
+    state: absent
+...

@@ -1,0 +1,14 @@
+---
+min_version:
+  kernel: 3.10.0-229.el6.x86_64
+  glibc: "2.15"
+  # compat-glibc: 2.5-46.2.x86_64
+
+ase_required_packages:
+  # - compat-glibc-2.5-46.2.x86_64
+  - glibc.i686
+
+ase_required_configurations:
+  - "prerequisites"
+  - "tune_RHEL"
+...

@@ -1,0 +1,4 @@
+---
+# Target files location
+ase_kit: "/var/ase_kit"
+...

@@ -1,0 +1,12 @@
+---
+min_version:
+  kernel: 4.12.14-94.41.1
+  glibc: 2.9-13.2
+
+ase_required_packages:
+  - glibc-32bit
+
+ase_required_configurations:
+  - "prerequisites"
+  - "tune_SLES"
+...

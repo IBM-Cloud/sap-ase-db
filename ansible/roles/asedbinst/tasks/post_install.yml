@@ -1,0 +1,9 @@
+---
+- name: Generate the user configuration file
+  template:
+      src: sybsid_env.cfg
+      dest: "/sybase/{{ ase_sid | upper }}/.cshrc"
+      owner: "syb{{ ase_sid | lower }}"
+      group: sapsys
+      mode: '0644'
+...

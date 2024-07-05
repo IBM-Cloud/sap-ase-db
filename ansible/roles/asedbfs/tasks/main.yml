@@ -1,0 +1,122 @@
+---
+- name: Set default JSON file
+  set_fact:
+    asesyb_vol_setup_json: "asesyb_vm_volume_layout.json"
+
+- name: Check if the JSON file for ASE SYB storage configuration is available on Ansible controller
+  stat:
+    path: "{{ playbook_dir }}/{{ asesyb_vol_setup_json }}"
+  register: json_storage_file_status
+  delegate_to: localhost
+
+- name: Fail if the JSON file is missing
+  fail:
+    msg: "The file {{ playbook_dir }}/{{ asesyb_vol_setup_json }} is missing."
+  when: not json_storage_file_status.stat.exists
+
+- name: Get the JSON file content
+  shell: "cat {{ playbook_dir }}/{{ asesyb_vol_setup_json }}"
+  register: result
+  changed_when: false
+  when: json_storage_file_status.stat.exists
+  delegate_to: localhost
+
+- name: Replace the holders in the output with the appropriate values
+  set_fact:
+    result: "{{ (result | regex_replace(replace_item.old_val, replace_item.new_val)) }}"
+  loop:
+      - { old_val: '<data_disk_size>', new_val: "{{ data_disk_size }}" }
+      - { old_val: '<swap_disk_size>', new_val: "{{ swap_disk_size }}" }
+      - { old_val: '<SID>', new_val: "{{ ase_sid | upper }}" }
+  loop_control:
+    loop_var: replace_item
+
+- name: Save the JSON data to a variable as a fact
+  set_fact:
+    jsondata: "{{ result.stdout | from_json }}"
+
+- name: Set the ASE SYB profile
+  set_fact:
+    asesyb_profile: "default"
+
+- name: Detect the appropriate disks to be configured
+  set_fact:
+    final_storage: "{{ [jsondata, ansible_devices, asesyb_profile] | list | storagedetails }}"
+
+- name: Get the missing disks
+  fail:
+    msg: "{{ final_storage }}"
+  when: final_storage is not mapping
+
+- name: Display final_storage
+  debug:
+    var: final_storage
+
+- name: Create the volume groups
+  lvg:
+    vg: "{{ ase_sid | lower }}_{{ stg_details.value.lvm.vg.vg_name }}"
+    pvs: "{{ stg_details.value.device | join(',') }}"
+  loop: "{{ final_storage | dict2items }}"
+  loop_control:
+    loop_var: stg_details
+  when: '"lvm" in stg_details.value.keys()'
+
+- name: Create the logical volumes
+  lvol:
+    vg: "{{ ase_sid|lower }}_{{ lvm_data[0]['vg_name'] }}"
+    lv: "{{ ase_sid|lower }}_{{ lvm_data[0]['lv_name'] }}"
+    size: "{{ lvm_data[0]['lv_size'] }}"
+    opts: "{{ lvm_data[0]['lv_options'] }}"
+    shrink: false
+  loop: "{{ final_storage | lvmdata }}"
+  loop_control:
+    loop_var: lvm_data
+
+- name: Create the partitions
+  parted:
+    device: "{{ part[0] }}"
+    number: 1
+    label: gpt
+    state: present
+  loop: "{{ final_storage | partitionlist }}"
+  loop_control:
+    loop_var: part
+
+- name: Create the filesystems
+  filesystem:
+    fstype: "{{ fs_data[0]['fs_type'] }}"
+    dev: "{{ fs_data[0]['fs_device'] }}"
+    opts: "{{ fs_data[0]['fs_options'] }}"
+  loop: "{{ [final_storage, ase_sid | lower] | filesystemdata }}"
+  loop_control:
+    loop_var: fs_data
+
+- name: Check if the filesystems should be mounted in a specific order
+  set_fact:
+    mounpoints: mp_d[0]['mp']
+  loop: "{{ [final_storage, ase_sid | lower] | filesystemdata }}"
+  loop_control:
+    loop_var: mp_d
+  when:  mp_d[0]['mp'] != None
+
+- name: Mount the filesystems
+  mount:
+    path: "{{ mp_data[0]['mp'] }}"
+    src: "{{ mp_data[0]['mount_source'] }}"
+    fstype: "{{ mp_data[0]['fs_type'] }}"
+    opts: "{{ mp_data[0]['mount_opt'] }}"
+    state: mounted
+  loop: "{{ [final_storage, ase_sid | lower] | filesystemdata }}"
+  loop_control:
+    loop_var: mp_data
+  when:  mp_data[0]['mp'] != None
+
+- name: Create SWAP on VSI
+  ansible.builtin.include_tasks:
+    file: swap_vm.yml
+
+- name: Reboot target host
+  reboot:
+    connect_timeout: 5
+    post_reboot_delay: 10
+...

@@ -1,0 +1,14 @@
+---
+- name: Create sapsys group
+  ansible.builtin.group:
+    name: sapsys
+    state: present
+    gid: 1002
+
+- name: Create syb{{ ase_sid|lower }} user
+  ansible.builtin.user:
+    name: "syb{{ ase_sid|lower }}"
+    shell: /bin/csh
+    home: "/sybase/{{ ase_sid|upper }}"
+    group: sapsys
+    state: present

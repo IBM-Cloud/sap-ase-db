@@ -1,0 +1,39 @@
+---
+# https://me.sap.com/notes/2987324
+
+- name: Detect the version of ASE to be installed
+  set_fact:
+    ase_version: "{{ ([([kit_ase_file, 'ASESERV'] | list | stringtolist)[1], '_']  | list | stringtolist)[0] }}"
+
+- name: Get the current kernel version
+  command: uname -r
+  register: kernel_output
+  changed_when: False
+  when: ase_version is match("160004P*")
+
+- debug:
+    msg: "Current kernel version should be higher than {{ min_version.kernel }}"
+  failed_when: kernel_output.stdout is version(min_version.kernel, '<')
+  when: ase_version is match("160004P*")
+
+- name: Get the current glibc version
+  shell: ldd --version | grep ldd
+  register: glibc_output
+  changed_when: False
+  when: ase_version is match("160004P*")
+
+- name: Extract glibc version
+  set_fact:
+    glibc_version: "{{ ([glibc_output.stdout, ' '] | list | stringtolist)[-1] }}"
+  when: ase_version is match("160004P*")
+
+- debug:
+    msg: "Current glibc version should be higher than {{ min_version.glibc }}"
+  failed_when: kernel_output.stdout is version(min_version.glibc, '<')
+  when: ase_version is match("160004P*")
+
+- name: Install required packages
+  package:
+    state: present
+    name: "{{ ase_required_packages }}"
+  when: ase_version is match("160004P*")

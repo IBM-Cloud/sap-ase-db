@@ -1,0 +1,51 @@
+---
+- name: Create {{ ase_kit }} directory
+  file:
+    path: "{{ ase_kit }}"
+    state: directory
+    owner: "syb{{ ase_sid| lower }}"
+    group: sapsys
+    mode: 0775
+
+- name: Get the short name of the kit file
+  set_fact:
+    kit_short_name: "ASESERV{{ ([kit_ase_file, 'ASESERV'] | list | stringtolist)[1] }}"
+
+- name: Copy "{{ kit_ase_file }}" kit to target
+  copy:
+    src: "{{ kit_ase_file }}"
+    dest: "{{ ase_kit }}"
+    owner: "syb{{ ase_sid| lower }}"
+    group: sapsys
+    mode: 0777
+
+- name: Extract the kit files from TGZ file
+  unarchive:
+    src: "{{ ase_kit }}/{{ kit_short_name }}"
+    dest: "{{ ase_kit }}"
+    remote_src: yes
+  become: true
+  become_user: "syb{{ ase_sid | lower }}"
+
+- name: Search for the installer file setup.bin
+  find:
+    paths: "{{ ase_kit }}"
+    patterns: 'setup.bin'
+    recurse: yes
+  register: path_results
+
+- name: Get the list of path for setup.bin
+  set_fact: 
+    list_path: "{{ list_path | default([]) + [file_item.path | string] }}"
+  loop: "{{ path_results.files | list }}"
+  loop_control:
+    loop_var: file_item
+
+- name: Get the correct path for setup.bin
+  set_fact: 
+    setup_bin_fullname: "{{ fullname_item | default(list_path[0]) }}"
+  loop: "{{ list_path }}"
+  loop_control:
+    loop_var: fullname_item
+  when: (fullname_item | length | int) < (setup_bin_fullname | length | int) or setup_bin_fullname is not defined
+...
